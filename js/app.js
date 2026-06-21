@@ -31,7 +31,12 @@
   /* ---- panel definitions ---- */
   const PANELS = [
     {
-      id: "matrix", tag: "RISK MAP", tagClass: "risk", h: 470,
+      id: "risksummary", tag: "IR-1", tagClass: "risk", h: 430,
+      title: "Investment Risk Summary", sub: "30-day VaR per risk · best / base / worst case",
+      render: (d) => chartRiskSummary(d, R), note: "",
+    },
+    {
+      id: "matrix", tag: "IR-2", tagClass: "risk", h: 470,
       title: "Investment-Risk Matrix", sub: "R1 · R2 · R3 — severity × likelihood",
       render: (d) => chartRiskMatrix(d, R),
       note: note(
@@ -40,7 +45,7 @@
         `No single risk is existential. The three channels are imperfectly correlated, so a diversified energy + power + copper (AMMN) portfolio means one shock rarely fires alone — exactly what the factor model below shows.`),
     },
     {
-      id: "var", tag: "IR-2", tagClass: "method", h: 470,
+      id: "var", tag: "IR-3", tagClass: "method", h: 470,
       title: "30-Day Value-at-Risk", sub: "Historical · Parametric · CVaR @ 90/95/99% CL",
       render: (d) => chartVaR(d, R),
       note: note(
@@ -49,7 +54,7 @@
         `These are <em>price</em> drawdowns, not capital impairment. MEDC's US$8.6/boe cash cost keeps it free-cash-flow positive far below current Brent, so VaR-sized dips are sentiment, not solvency. Size positions to the 99% figure and the risk is survivable.`),
     },
     {
-      id: "mc", tag: "IR-5", tagClass: "method", h: 480,
+      id: "mc", tag: "IR-6", tagClass: "method", h: 480,
       title: "Monte-Carlo Price Simulation", sub: `${mc.n_sims.toLocaleString()} bootstrap paths · ${mc.horizon}-day horizon`,
       render: (d) => chartMonteCarlo(d, R),
       note: note(
@@ -58,7 +63,7 @@
         `The upside tail (p95 ${RP(mc.bootstrap.p95)}) is wider than the downside tail relative to spot — consistent with the asymmetric BUY thesis. Over a 12-month horizon the positive drift and AMMN optionality dominate this near-term noise.`),
     },
     {
-      id: "stress", tag: "STRESS", tagClass: "risk", h: 440,
+      id: "stress", tag: "IR-5", tagClass: "risk", h: 440,
       title: "Macro Stress Scenarios", sub: "factor-based, sustained (weekly-β) shocks",
       render: (d) => chartStress(d, R),
       note: note(
@@ -76,7 +81,7 @@
         `Oil exposure is real but partial — a 10% Brent drop maps to ≈${P(brent.beta*0.10,1)} on the stock, not 1-for-1. The US$8.6/boe cost floor, 54.6% USD revenue and the copper/power segments absorb the rest, capping the true downside.`),
     },
     {
-      id: "transmission", tag: "IR-3", tagClass: "macro", h: 450,
+      id: "transmission", tag: "CHANNELS", tagClass: "macro", h: 450,
       title: "Risk Transmission Map", sub: "how macro shocks reach the share price",
       render: (d) => chartTransmission(d, R),
       note: note(
@@ -177,10 +182,10 @@
   ];
 
   /* ---- section assignment: which exhibits go in the report body vs appendix ---- */
-  const PAPER_IDS = new Set(["matrix", "var", "transmission", "brent", "mc", "stress"]);
+  const PAPER_IDS = new Set(["risksummary", "matrix", "var", "brent", "stress", "mc"]);
   const SECTION_META = {
     paper: { title: "Main Exhibits", badge: "Report Body",
-             sub: "the 6 figures to place in the report (Figures IR-1 to IR-6)" },
+             sub: "the figures to place in the report body — screenshot any panel" },
     appendix: { title: "Appendix", badge: "Supporting",
                 sub: "deeper statistical evidence behind the main exhibits" },
   };
@@ -207,10 +212,14 @@
   ["paper", "appendix"].forEach(sec => {
     makeSectionHeader(sec);
     PANELS.filter(cfg => (PAPER_IDS.has(cfg.id) ? "paper" : "appendix") === sec).forEach(cfg => {
+      // chart-only panels (narration now lives in its own section): taller chart,
+      // no per-graph note. Slightly bigger for the report-body exhibits.
+      const hh = (sec === "paper" ? 408 : 372) + (cfg.id === "corr" ? 70 : 0);
+      cfg._h = hh;
       const el = document.createElement("section");
       el.className = "panel";
       el.id = "p-" + cfg.id;
-      el.style.height = cfg.h + "px";
+      el.style.height = hh + "px";
       el.innerHTML = `
         <div class="panel__head">
           <span class="panel__tag ${cfg.tagClass || ""}">${cfg.tag}</span>
@@ -222,12 +231,11 @@
         </div>
         <div class="panel__body">
           <div class="panel__chart" id="c-${cfg.id}"></div>
-          <div class="panel__note">${cfg.note}</div>
         </div>`;
       canvas.appendChild(el);
       const chartDiv = el.querySelector(".panel__chart");
       charts.push({ cfg, chartDiv });
-      LM.add(el, chartDiv, cfg.h, sec);
+      LM.add(el, chartDiv, hh, sec);
     });
   });
 
@@ -272,19 +280,25 @@
      ===================================================================== */
   (function buildNarration() {
     const dr = R.descriptives.MEDC;
-    const recession = R.stress.find(s => s.name.includes("recession"));
-    const covid = R.stress.find(s => s.name.includes("COVID"));
     const abs = Math.abs;
+    const prv = R.per_risk_var.risks;
+    const pr1 = prv.find(x => x.id === "R1").levels;
+    const pr2 = prv.find(x => x.id === "R2").levels;
+    const pr3 = prv.find(x => x.id === "R3").levels;
 
     const blocks = [
-      { h: "Investment Risks", body: `
-        <p class="lead">MEDC commands a resilient operational profile, yet three principal risks govern the
-        equity's forward distribution: foreign-exchange and debt-servicing pressure, commodity-price
-        volatility, and domestic gas price-cap regulation. Each risk below is quantified against ten years
-        of daily market data, stress-tested across the relevant horizons, and weighed against the structural
-        mitigants that preserve the asymmetric upside.</p>` },
+      { cls: "headline", h: `Risk Model Indicates a Bounded, Diversifiable Downside: a Worst-Case One-Month VaR of −${P(v99.var_hist,0)} Concentrated in Commodity Beta`, body: `
+        <p class="lead">The risk model indicates a medium risk profile. The dominant single-risk exposure is
+        commodity-price volatility, whose worst-case (99 percent) one-month Value-at-Risk reaches
+        <b>${P(pr2['0.99'].var)}</b>, an implied price of <b>${RP(pr2['0.99'].price)}</b>, against a base-case
+        (95 percent) loss of <b>${P(pr2['0.95'].var)}</b>. Aggregating every factor, the whole-equity 95
+        percent monthly Value-at-Risk is <b>${P(v95.var_hist)}</b> and the 99 percent figure is
+        <b>${P(v99.var_hist)}</b>, an implied worst-case floor near <b>${RP(v99.price_hist)}</b>. These
+        downsides are bounded and mean-reverting, and largely diversifiable: the market beta to the IHSG is
+        approximately <b>${N(capm.beta,2)}</b>, so most of the risk is systematic rather than idiosyncratic.
+        The three principal risks are quantified below.</p>` },
 
-      { h: "R1: Foreign Exchange Volatility Inflates Debt-Servicing Burdens", body: `
+      { h: "Risk 1: Foreign Exchange and USD-Debt Servicing Pressure", body: `
         <p>MEDC carries USD-denominated debt across roughly 80 to 90 percent of total financial liabilities,
         so a depreciating Rupiah mechanically inflates the cost of servicing those obligations. At the daily
         frequency, however, the equity shows almost no measurable currency sensitivity. A single-factor
@@ -297,13 +311,16 @@
         <p>The exposure becomes material only over longer horizons and through the equity-market channel. At
         the monthly frequency the beta to USD/IDR widens to <b>${N(tf.monthly.USDIDR.beta,1)}</b> with a
         t-statistic of <b>${N(tf.monthly.USDIDR.t,1)}</b>, reflecting the broad emerging-market de-rating that
-        accompanies sustained Rupiah weakness and foreign capital outflows. Bank Indonesia's defensive policy
+        accompanies sustained Rupiah weakness and foreign capital outflows. Modelled as a standalone risk, the
+        factor-implied Value-at-Risk is <b>${P(pr1['0.95'].var)}</b> in the base case and
+        <b>${P(pr1['0.99'].var)}</b> in the worst case, an implied price of <b>${RP(pr1['0.99'].price)}</b>.
+        Bank Indonesia's defensive policy
         rate of 5.75 percent caps the tail of that depreciation, and management's retention of ample USD cash
         reserves bridges any short-term currency mismatch. The currency risk is therefore real but
         well-contained, expressing itself as episodic multiple compression rather than a permanent impairment
         of cash flow.</p>` },
 
-      { h: "R2: Commodity Price Volatility Compresses Projected Free Cash Flows", body: `
+      { h: "Risk 2: Commodity Price Volatility (Brent and Copper)", body: `
         <p>As an upstream price-taker, MEDC remains exposed to Brent crude and, through its 20.9 percent stake
         in Amman Mineral, to copper. The oil sensitivity is statistically robust and strengthens with horizon.
         The Brent beta rises from <b>${N(brent.beta,2)}</b> on daily returns, significant at a t-statistic of
@@ -317,22 +334,26 @@
         with a conditional shortfall of <b>${P(v99.cvar_hist)}</b>. A ${mc.n_sims.toLocaleString()}-path
         Monte-Carlo simulation that bootstraps the actual fat-tailed return distribution assigns a median
         one-month outcome of <b>${RP(mc.bootstrap.median_price)}</b> and a fifth-percentile outcome of
-        <b>${RP(mc.bootstrap.p05)}</b>. These are price drawdowns rather than solvency events. MEDC's unit
+        <b>${RP(mc.bootstrap.p05)}</b>. Isolated as a standalone risk, commodity volatility carries a base-case
+        Value-at-Risk of <b>${P(pr2['0.95'].var)}</b> and a worst-case of <b>${P(pr2['0.99'].var)}</b>, an
+        implied price of <b>${RP(pr2['0.99'].price)}</b>, the largest of the three risks. These are price
+        drawdowns rather than solvency events. MEDC's unit
         cash cost of USD 8.6 per barrel of oil equivalent, well below the industry average, keeps the company
         free-cash-flow positive far below prevailing Brent, so a commodity correction compresses growth
         funding without threatening the dividend or the balance sheet. The copper position adds a
         counter-cyclical earnings buffer through a structurally deficit metal, partially offsetting any
         hydrocarbon weakness.</p>` },
 
-      { h: "R3: Government Gas Price Caps Force Margin Stagnation", body: `
-        <p>The Indonesian HGBT policy caps the domestic gas price at USD 6 per MMBtu for designated strategic
-        industries, and the principal regulatory risk is an expansion of that cap onto MEDC's premium assets
-        such as the Corridor Block. This is a discrete policy event rather than a continuously traded factor,
-        so it does not register in the daily betas; its severity is captured through scenario analysis instead.
-        Applying the estimated factor sensitivities, a broad domestic demand-and-margin shock of the kind
-        associated with aggressive intervention maps to a high-single to double-digit equity drawdown,
-        materially smaller than a full commodity or systemic crisis, where the modelled impacts reach
-        <b>${P(recession.expected_return)}</b> and <b>${P(covid.expected_return)}</b> respectively.</p>
+      { h: "Risk 3: Domestic Gas Price-Cap and Regulatory Friction", body: `
+        <p>This risk carries low occurrence probability but high severity. The Indonesian HGBT policy caps the
+        domestic gas price at USD 6 per MMBtu for designated strategic industries, and the principal regulatory
+        risk is an expansion of that cap onto MEDC's premium assets such as the Corridor Block. This is a
+        discrete policy event rather than a continuously traded factor, so it does not register in the daily
+        betas; its severity is captured through scenario analysis instead. Modelled as an analyst regulatory
+        scenario band, the per-risk Value-at-Risk runs from <b>${P(pr3['0.95'].var)}</b> in the base case to
+        <b>${P(pr3['0.99'].var)}</b> in the worst case, an implied price of <b>${RP(pr3['0.99'].price)}</b>;
+        because the risk is policy-driven and persistent, it also raises the likelihood of valuation-multiple
+        compression beyond the immediate earnings hit.</p>
         <p>The mitigants are structural. National proven gas reserves have fallen 32 percent since 2019, from
         49.7 to 33.8 TSCF, which strengthens the bargaining position of existing producers, and domestic
         utilisation already exceeds export volumes, guaranteeing a captive market. Management negotiates
@@ -356,12 +377,12 @@
 
       { h: "Figure Captions (Main Exhibits)", body: `
         <div class="fig-list">
-          <b>Figure IR-1.</b> MEDC Investment-Risk Matrix (severity vs likelihood).<br>
-          <b>Figure IR-2.</b> 30-Day Historical and Parametric Value-at-Risk with CVaR, 90/95/99% confidence.<br>
-          <b>Figure IR-3.</b> Risk Transmission Map: macro factors to the share price.<br>
+          <b>Figure IR-1.</b> Investment Risk Summary: 30-day Value-at-Risk per risk (best / base / worst case).<br>
+          <b>Figure IR-2.</b> MEDC Investment-Risk Matrix (severity vs likelihood).<br>
+          <b>Figure IR-3.</b> 30-Day Historical and Parametric Value-at-Risk with CVaR, 90/95/99% confidence.<br>
           <b>Figure IR-4.</b> MEDC Sensitivity to Brent Crude (single-factor regression).<br>
-          <b>Figure IR-5.</b> Monte-Carlo Price Simulation (${mc.n_sims.toLocaleString()} bootstrap paths, ${mc.horizon}-day horizon).<br>
-          <b>Figure IR-6.</b> Macro Stress Scenarios (factor-based implied price impact).
+          <b>Figure IR-5.</b> Macro Stress Scenarios (factor-based implied price impact).<br>
+          <b>Figure IR-6.</b> Monte-Carlo Price Simulation (${mc.n_sims.toLocaleString()} bootstrap paths, ${mc.horizon}-day horizon).
         </div>` },
     ];
 
@@ -376,7 +397,7 @@
     const doc = nar.querySelector("#doc");
     blocks.forEach(b => {
       const d = document.createElement("div");
-      d.className = "doc__block";
+      d.className = "doc__block" + (b.cls ? " " + b.cls : "");
       d.innerHTML = `<button class="copybtn" data-copy>⧉ Copy</button>` +
         (b.h ? `<h3>${b.h}</h3>` : "") + b.body;
       doc.appendChild(d);

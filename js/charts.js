@@ -383,25 +383,59 @@ function chartDistribution(div, R) {
 function chartStress(div, R) {
   const s = R.stress.slice().sort((a, b) => a.expected_return - b.expected_return);
   const x = s.map(d => d.expected_return * 100);
+  const minX = Math.min(...x), maxX = Math.max(...x);
   const traces = [{
     type: "bar", orientation: "h", x, y: s.map(d => d.name),
     marker: { color: x.map(v => v < 0 ? C.red : C.teal), line: { width: 0 } },
+    width: 0.62,
     hovertemplate: "%{y}<br>implied %{x:.1f}%<extra></extra>",
   }];
   const layout = {
-    margin: { l: 196, r: 24, t: 14, b: 40 },
+    margin: { l: 196, r: 16, t: 14, b: 40 },
+    // give the right side enough room for the "−60.3% · Rp627" labels
     xaxis: { title: { text: "implied MEDC move (weekly-β stress)", font: { size: 11 } }, ticksuffix: "%",
-             range: [Math.min(...x) * 1.5, Math.max(2, Math.max(...x) * 1.5)],
-             zeroline: true, zerolinecolor: C.line2, zerolinewidth: 1.5 },
-    yaxis: { automargin: true, tickfont: { size: 10.5 } },
-    // value labels placed just beyond each bar tip (outside), never colliding with category names
+             range: [minX * 1.1, Math.max(14, Math.abs(minX) * 0.78)], dtick: 20,
+             zeroline: true, zerolinecolor: "#9aa6bb", zerolinewidth: 1.5, showgrid: true },
+    yaxis: { automargin: true, tickfont: { size: 10.5 }, showgrid: false },
+    // labels sit in the clean zone (right of zero for losses; beyond the tip for gains)
     annotations: s.map(d => {
-      const xr = d.expected_return * 100;
-      return { x: xr, y: d.name, xanchor: xr < 0 ? "right" : "left", xshift: xr < 0 ? -5 : 5,
-        showarrow: false, text: `${fmt.pct(d.expected_return,1)} · ${fmt.rp(d.implied_price)}`,
-        font: { family: MONO, size: 10.5, color: xr < 0 ? C.redSoft : C.teal } };
+      const xr = d.expected_return * 100, pos = xr >= 0;
+      return { x: pos ? xr : 0, y: d.name, xanchor: "left", xshift: 8, showarrow: false,
+        text: `${fmt.pct(d.expected_return,1)} · ${fmt.rp(d.implied_price)}`,
+        font: { family: MONO, size: 10, color: pos ? C.teal : C.red } };
     }),
   };
+  draw(div, traces, layout);
+}
+
+/* ---------- 14b. Investment-risk summary: VaR per risk (best/base/worst) ---------- */
+function chartRiskSummary(div, R) {
+  const pr = R.per_risk_var;
+  const cl = pr.conf;                                   // [.90,.95,.99]
+  const labels = { 0.9: "Best case (90%)", 0.95: "Base case (95%)", 0.99: "Worst case (99%)" };
+  const shade = { 0.9: "#7ea3d8", 0.95: "#3f6bb5", 0.99: "#1d3a6e" };  // light→dark navy
+  const y = pr.risks.map(r => `${r.id} · ${r.label}`);
+  const traces = cl.map(c => {
+    const k = String(c);
+    return {
+      type: "bar", orientation: "h", name: labels[c], y,
+      x: pr.risks.map(r => r.levels[k].var * 100),
+      marker: { color: shade[c], line: { width: 0 } },
+      text: pr.risks.map(r => `${fmt.rp(r.levels[k].price)} (${fmt.pct(r.levels[k].ret,1)})`),
+      textposition: "outside", textfont: { family: MONO, size: 9.5, color: "#34425a" },
+      cliponaxis: false,
+      hovertemplate: `%{y} · ${labels[c]}<br>VaR %{x:.1f}% of price<extra></extra>`,
+    };
+  });
+  const maxVar = Math.max(...pr.risks.flatMap(r => cl.map(c => r.levels[String(c)].var * 100)));
+  const layout = deepMerge(topLegend(), {
+    barmode: "group", bargap: .42, bargroupgap: .1,
+    legend: { orientation: "h", x: 0, y: 1.16, font: { size: 10, color: C.inkDim } },
+    margin: { l: 150, r: 30, t: 34, b: 40 },
+    xaxis: { title: { text: "30-day Value-at-Risk (loss % of price)", font: { size: 11 } },
+             ticksuffix: "%", range: [0, maxVar * 1.42], showgrid: true },
+    yaxis: { automargin: true, tickfont: { size: 11 }, showgrid: false },
+  });
   draw(div, traces, layout);
 }
 

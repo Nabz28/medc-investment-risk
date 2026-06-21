@@ -291,6 +291,52 @@ def timeframe_betas(px, factors=("Brent", "Copper", "USDIDR", "IHSG")):
     return out
 
 
+def per_risk_var(r, results, current_price):
+    """Per-risk 30-day VaR at best/base/worst confidence (90/95/99%).
+
+    R1 (FX) and R2 (commodity) are factor-component historical VaR: the MEDC
+    return implied by each risk's factors (beta x factor return), simulated over
+    21-day windows so cross-factor correlation is handled naturally. R3
+    (regulatory gas price-cap) has no traded factor and is an analyst scenario band.
+    """
+    def roll21(series):
+        s = series.dropna()
+        roll = s.rolling(HORIZON).sum().dropna()
+        return (np.exp(roll) - 1.0).values
+
+    tfm = results["timeframe_betas"]
+    b_fx = tfm["monthly"]["USDIDR"]["beta"]   # sustained de-rating beta (~ -2.2)
+    b_br = tfm["weekly"]["Brent"]["beta"]      # ~0.57
+    b_cu = tfm["weekly"]["Copper"]["beta"]     # ~0.52
+
+    comp_r1 = b_fx * r["USDIDR"]
+    comp_r2 = b_br * r["Brent"] + b_cu * r["Copper"]
+    d1, d2 = roll21(comp_r1), roll21(comp_r2)
+
+    def lv(dist):
+        out = {}
+        for c in CONF:
+            ret = float(np.quantile(dist, 1 - c))         # left-tail (negative)
+            out[str(c)] = {"var": -ret, "ret": ret, "price": current_price * (1 + ret)}
+        return out
+
+    r3 = {0.90: -0.08, 0.95: -0.12, 0.99: -0.17}          # analyst regulatory band
+    R3 = {str(c): {"var": -r3[c], "ret": r3[c], "price": current_price * (1 + r3[c])} for c in CONF}
+
+    return {
+        "conf": CONF,
+        "risks": [
+            {"id": "R1", "label": "FX / USD-Debt", "levels": lv(d1)},
+            {"id": "R2", "label": "Commodity (Brent + Cu)", "levels": lv(d2)},
+            {"id": "R3", "label": "Gas Price-Cap (HGBT)", "levels": R3},
+        ],
+        "method": ("R1 = monthly USD/IDR beta applied to the USD/IDR 21-day return; "
+                   "R2 = weekly Brent + Copper betas applied to their 21-day returns "
+                   "(both via historical simulation of the factor-implied MEDC return); "
+                   "R3 = analyst regulatory scenario band."),
+    }
+
+
 def stress_scenarios(betas):
     """Translate macro shocks into expected MEDC move using estimated factor betas.
 
@@ -458,6 +504,9 @@ def main():
 
     # --- multi-timeframe betas ---
     results["timeframe_betas"] = timeframe_betas(px)
+
+    # --- per-risk VaR (best/base/worst) ---
+    results["per_risk_var"] = per_risk_var(r, results, CURRENT_PRICE)
 
     # --- stress scenarios (sustained shocks -> weekly betas) ---
     results["stress"] = stress_scenarios(betas_w)
