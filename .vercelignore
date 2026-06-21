@@ -1,0 +1,4 @@
+# Deploy the static site only — keep the Python analysis pipeline out of the
+# Vercel build so it is detected as a zero-config static project.
+scripts/
+requirements.txt

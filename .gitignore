@@ -13,3 +13,5 @@ Thumbs.db
 
 # Source deck text dump (large, regenerable)
 scripts/cache/medc_pdf_text.txt
+
+.vercel
