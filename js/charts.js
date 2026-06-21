@@ -36,9 +36,9 @@ function chartRiskMatrix(div, R) {
   const layout = {
     margin: { l: 64, r: 18, t: 16, b: 48 },
     xaxis: { title: { text: "Likelihood →", font: { size: 11 } }, range: [1, 5], dtick: 1,
-             gridcolor: "rgba(42,58,89,.35)" },
+             gridcolor: "rgba(150,162,184,.3)" },
     yaxis: { title: { text: "Severity →", font: { size: 11 } }, range: [1, 5], dtick: 1,
-             gridcolor: "rgba(42,58,89,.35)" },
+             gridcolor: "rgba(150,162,184,.3)" },
     shapes: [
       // high-risk quadrant tint
       { type: "rect", x0: 3, x1: 5, y0: 3, y1: 5, fillcolor: "rgba(255,93,115,.07)", line: { width: 0 }, layer: "below" },
@@ -51,7 +51,7 @@ function chartRiskMatrix(div, R) {
       { x: 4.9, y: 4.85, text: "CRITICAL ZONE", showarrow: false, xanchor: "right",
         font: { size: 9.5, color: C.redSoft, family: MONO } },
       { x: 1.1, y: 1.15, text: "low-risk", showarrow: false, xanchor: "left",
-        font: { size: 9.5, color: "rgba(40,224,180,.6)", family: MONO } },
+        font: { size: 9.5, color: C.teal, family: MONO } },
     ]),
   };
   draw(div, traces, layout);
@@ -152,7 +152,7 @@ function scatterReg(div, sens, xlab, color) {
       xref: "paper", yref: "paper", x: .03, y: .97, align: "left", showarrow: false,
       text: `β = <b>${sens.beta.toFixed(3)}</b>  ·  t = ${sens.t_beta.toFixed(1)}  ·  R² = ${(sens.r2*100).toFixed(1)}%`,
       font: { family: MONO, size: 11.5, color: C.ink },
-      bgcolor: "rgba(7,10,16,.7)", bordercolor: color, borderpad: 5, borderwidth: 1,
+      bgcolor: "rgba(255,255,255,.92)", bordercolor: color, borderpad: 5, borderwidth: 1,
     }],
   };
   draw(div, traces, layout);
@@ -184,7 +184,7 @@ function chartMonteCarlo(div, R) {
     shapes: vlines.map(v => ({ type: "line", x0: v.x, x1: v.x, y0: 0, y1: ymax,
       line: { color: v.c, width: 1.6, dash: v.dash } })),
     annotations: vlines.map((v, i) => ({ x: v.x, y: ymax * (1 - i * 0.09), text: v.t, showarrow: false,
-      font: { family: MONO, size: 10.5, color: v.c }, xanchor: v.x < cp ? "left" : "right", bgcolor: "rgba(7,10,16,.65)" })),
+      font: { family: MONO, size: 10.5, color: v.c }, xanchor: v.x < cp ? "left" : "right", bgcolor: "rgba(255,255,255,.92)" })),
   };
   draw(div, traces, layout);
 }
@@ -239,7 +239,7 @@ function chartFactorBetas(div, R) {
     shapes: [{ type: "line", x0: 0, x1: 0, yref: "paper", y0: 0, y1: 1, line: { color: C.line2, width: 1.5, dash: "dot" } }],
     annotations: [{ xref: "paper", yref: "paper", x: .98, y: .52, showarrow: false, xanchor: "right",
       text: "teal = significant (|t|≥1.96)", font: { size: 10.5, color: C.inkFaint, family: MONO },
-      bgcolor: "rgba(7,10,16,.72)", borderpad: 3 }],
+      bgcolor: "rgba(255,255,255,.92)", borderpad: 3 }],
   };
   draw(div, traces, layout);
 }
@@ -273,7 +273,7 @@ function chartCorrelation(div, R) {
   const traces = [{
     type: "heatmap", z: m, x: lab, y: lab,
     zmin: -1, zmax: 1,
-    colorscale: [[0, "#ff5d73"], [.5, "#0e1421"], [1, "#28e0b4"]],
+    colorscale: [[0, "#e11d48"], [.5, "#f3f5f8"], [1, "#0e9d78"]],
     xgap: 1.5, ygap: 1.5,
     colorbar: { tickfont: { family: MONO, size: 9, color: C.inkFaint }, thickness: 10, len: .8, outlinewidth: 0 },
     hovertemplate: "%{y} · %{x}<br>ρ = %{z:.2f}<extra></extra>",
@@ -283,7 +283,7 @@ function chartCorrelation(div, R) {
   for (let i = 0; i < lab.length; i++) for (let j = 0; j < lab.length; j++) {
     const v = m[i][j];
     ann.push({ x: lab[j], y: lab[i], text: v.toFixed(2), showarrow: false,
-      font: { family: MONO, size: 8.5, color: Math.abs(v) > .55 ? "#06121f" : "rgba(159,176,204,.8)" } });
+      font: { family: MONO, size: 8.5, color: Math.abs(v) > .5 ? "#ffffff" : "rgba(40,52,72,.9)" } });
   }
   const layout = {
     margin: { l: 78, r: 10, t: 12, b: 78 },
@@ -374,7 +374,7 @@ function chartDistribution(div, R) {
     yaxis: { showticklabels: false, title: { text: "density", font: { size: 11 } } },
     annotations: [{ xref: "paper", yref: "paper", x: .98, y: .96, xanchor: "right", showarrow: false, align: "right",
       text: `excess kurtosis <b>${R.distribution.excess_kurtosis.toFixed(1)}</b> · skew ${R.distribution.skew.toFixed(2)}<br>Jarque–Bera p ${R.distribution.pvalue < 1e-6 ? "< 1e-6" : R.distribution.pvalue.toFixed(3)} → reject normality`,
-      font: { family: MONO, size: 10.5, color: C.ink }, bgcolor: "rgba(7,10,16,.7)", bordercolor: C.amber, borderpad: 5, borderwidth: 1 }],
+      font: { family: MONO, size: 10.5, color: C.ink }, bgcolor: "rgba(255,255,255,.92)", bordercolor: C.amber, borderpad: 5, borderwidth: 1 }],
   });
   draw(div, traces, layout);
 }

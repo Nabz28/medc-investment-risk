@@ -1,9 +1,10 @@
-/* Shared Plotly theme + small helpers — keeps every chart visually consistent. */
+/* Shared Plotly theme + small helpers — LIGHT (white) theme for print/screenshot. */
 const C = {
-  bg: "#0e1421", panel: "#111a2b", line: "#1d2940", line2: "#2a3a59",
-  ink: "#eaf0fb", inkDim: "#9fb0cc", inkFaint: "#64748b",
-  teal: "#28e0b4", amber: "#ffb454", gold: "#f5d77a", red: "#ff5d73",
-  redSoft: "#ff8499", blue: "#5b8cff", violet: "#9b8cff", green: "#39d98a",
+  bg: "#ffffff", panel: "#ffffff", line: "#e6e9ef", line2: "#cbd3df",
+  ink: "#0f1722", inkDim: "#475569", inkFaint: "#7b8794",
+  teal: "#0e9d78", amber: "#c2700a", gold: "#9a7b1e", red: "#e11d48",
+  redSoft: "#d23a5e", blue: "#2563eb", violet: "#7c5cff", green: "#0e9d78",
+  box: "rgba(255,255,255,.92)",
 };
 
 const FONT = "Inter, system-ui, sans-serif";
@@ -17,17 +18,17 @@ function baseLayout(extra = {}) {
     font: { family: FONT, color: C.inkDim, size: 12 },
     margin: { l: 56, r: 18, t: 16, b: 40 },
     xaxis: {
-      gridcolor: "rgba(42,58,89,.4)", zerolinecolor: "rgba(42,58,89,.8)",
+      gridcolor: "rgba(150,162,184,.28)", zerolinecolor: "rgba(120,132,156,.55)",
       linecolor: C.line2, tickfont: { family: MONO, size: 10.5, color: C.inkFaint },
       automargin: true,
     },
     yaxis: {
-      gridcolor: "rgba(42,58,89,.4)", zerolinecolor: "rgba(42,58,89,.8)",
+      gridcolor: "rgba(150,162,184,.28)", zerolinecolor: "rgba(120,132,156,.55)",
       linecolor: C.line2, tickfont: { family: MONO, size: 10.5, color: C.inkFaint },
       automargin: true,
     },
     hoverlabel: {
-      bgcolor: "#0b0f17", bordercolor: C.line2,
+      bgcolor: "#ffffff", bordercolor: C.line2,
       font: { family: MONO, size: 12, color: C.ink },
     },
     showlegend: false,

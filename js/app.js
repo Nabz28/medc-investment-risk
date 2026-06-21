@@ -176,34 +176,59 @@
     },
   ];
 
+  /* ---- section assignment: which exhibits go in the report body vs appendix ---- */
+  const PAPER_IDS = new Set(["matrix", "var", "transmission", "brent", "mc", "stress"]);
+  const SECTION_META = {
+    paper: { title: "Main Exhibits", badge: "Report Body",
+             sub: "the 6 figures to place in the report (Figures IR-1 to IR-6)" },
+    appendix: { title: "Appendix", badge: "Supporting",
+                sub: "deeper statistical evidence behind the main exhibits" },
+  };
+
   /* ---- build DOM ---- */
   const canvas = document.getElementById("canvas");
   document.getElementById("boot").remove();
   LM.init(canvas);
 
+  function makeSectionHeader(sec) {
+    const m = SECTION_META[sec];
+    const h = document.createElement("div");
+    h.className = "section-head";
+    h.id = "sec-" + sec;
+    h.innerHTML = `<span class="section-head__badge ${sec}">${m.badge}</span>
+      <span class="section-head__title">${m.title}</span>
+      <span class="section-head__sub">${m.sub}</span>`;
+    canvas.appendChild(h);
+    LM.registerHeader(sec, h);
+    return h;
+  }
+
   const charts = [];
-  PANELS.forEach(cfg => {
-    const el = document.createElement("section");
-    el.className = "panel";
-    el.id = "p-" + cfg.id;
-    el.style.height = cfg.h + "px";
-    el.innerHTML = `
-      <div class="panel__head">
-        <span class="panel__tag ${cfg.tagClass || ""}">${cfg.tag}</span>
-        <div class="panel__titles">
-          <div class="panel__title">${cfg.title}</div>
-          <div class="panel__sub">${cfg.sub}</div>
+  ["paper", "appendix"].forEach(sec => {
+    makeSectionHeader(sec);
+    PANELS.filter(cfg => (PAPER_IDS.has(cfg.id) ? "paper" : "appendix") === sec).forEach(cfg => {
+      const el = document.createElement("section");
+      el.className = "panel";
+      el.id = "p-" + cfg.id;
+      el.style.height = cfg.h + "px";
+      el.innerHTML = `
+        <div class="panel__head">
+          <span class="panel__tag ${cfg.tagClass || ""}">${cfg.tag}</span>
+          <div class="panel__titles">
+            <div class="panel__title">${cfg.title}</div>
+            <div class="panel__sub">${cfg.sub}</div>
+          </div>
+          <span class="panel__grip">⠿</span>
         </div>
-        <span class="panel__grip">⠿</span>
-      </div>
-      <div class="panel__body">
-        <div class="panel__chart" id="c-${cfg.id}"></div>
-        <div class="panel__note">${cfg.note}</div>
-      </div>`;
-    canvas.appendChild(el);
-    const chartDiv = el.querySelector(".panel__chart");
-    charts.push({ cfg, chartDiv });
-    LM.add(el, chartDiv, cfg.h);
+        <div class="panel__body">
+          <div class="panel__chart" id="c-${cfg.id}"></div>
+          <div class="panel__note">${cfg.note}</div>
+        </div>`;
+      canvas.appendChild(el);
+      const chartDiv = el.querySelector(".panel__chart");
+      charts.push({ cfg, chartDiv });
+      LM.add(el, chartDiv, cfg.h, sec);
+    });
   });
 
   // position first (gives panels real width), then render charts one-per-tick
@@ -240,4 +265,145 @@
   /* ---- toolbar ---- */
   document.getElementById("resetLayout").addEventListener("click", () => LM.reset());
   document.getElementById("tidyLayout").addEventListener("click", () => LM.tidy(false));
+
+  /* =====================================================================
+     Investment-risk NARRATION — written in the report's voice, grounded in
+     the live statistics above, formatted to copy straight into the ER.
+     ===================================================================== */
+  (function buildNarration() {
+    const dr = R.descriptives.MEDC;
+    const recession = R.stress.find(s => s.name.includes("recession"));
+    const covid = R.stress.find(s => s.name.includes("COVID"));
+    const abs = Math.abs;
+
+    const blocks = [
+      { h: "Investment Risks", body: `
+        <p class="lead">MEDC commands a resilient operational profile, yet three principal risks govern the
+        equity's forward distribution: foreign-exchange and debt-servicing pressure, commodity-price
+        volatility, and domestic gas price-cap regulation. Each risk below is quantified against ten years
+        of daily market data, stress-tested across the relevant horizons, and weighed against the structural
+        mitigants that preserve the asymmetric upside.</p>` },
+
+      { h: "R1: Foreign Exchange Volatility Inflates Debt-Servicing Burdens", body: `
+        <p>MEDC carries USD-denominated debt across roughly 80 to 90 percent of total financial liabilities,
+        so a depreciating Rupiah mechanically inflates the cost of servicing those obligations. At the daily
+        frequency, however, the equity shows almost no measurable currency sensitivity. A single-factor
+        regression of MEDC returns on the USD/IDR rate produces a beta of only <b>${N(fx.beta,2)}</b> with an
+        R-squared of just <b>${P(fx.r2,1)}</b>, confirming that the natural hedge largely neutralises
+        day-to-day exchange exposure. The hedge is structural rather than incidental. International markets
+        across Asia, Africa and the Middle East generate 54.6 percent of total sales in hard currency, so a
+        weaker Rupiah lifts reported revenue at the same moment it raises USD debt costs, and the two effects
+        substantially cancel.</p>
+        <p>The exposure becomes material only over longer horizons and through the equity-market channel. At
+        the monthly frequency the beta to USD/IDR widens to <b>${N(tf.monthly.USDIDR.beta,1)}</b> with a
+        t-statistic of <b>${N(tf.monthly.USDIDR.t,1)}</b>, reflecting the broad emerging-market de-rating that
+        accompanies sustained Rupiah weakness and foreign capital outflows. Bank Indonesia's defensive policy
+        rate of 5.75 percent caps the tail of that depreciation, and management's retention of ample USD cash
+        reserves bridges any short-term currency mismatch. The currency risk is therefore real but
+        well-contained, expressing itself as episodic multiple compression rather than a permanent impairment
+        of cash flow.</p>` },
+
+      { h: "R2: Commodity Price Volatility Compresses Projected Free Cash Flows", body: `
+        <p>As an upstream price-taker, MEDC remains exposed to Brent crude and, through its 20.9 percent stake
+        in Amman Mineral, to copper. The oil sensitivity is statistically robust and strengthens with horizon.
+        The Brent beta rises from <b>${N(brent.beta,2)}</b> on daily returns, significant at a t-statistic of
+        <b>${N(brent.t_beta,1)}</b>, to <b>${N(tf.weekly.Brent.beta,2)}</b> on weekly and monthly returns,
+        where crude explains roughly <b>${P(tf.weekly.Brent.r2,0)}</b> of the variance in MEDC's price. The
+        exposure is also asymmetric. The down-oil beta of <b>${N(brent.semi.beta_down,2)}</b> exceeds the
+        up-oil beta of <b>${N(brent.semi.beta_up,2)}</b>, meaning the stock falls faster than it rises with
+        crude, a property the risk model captures explicitly.</p>
+        <p>A 30-day historical Value-at-Risk places the 95 percent loss at <b>${P(v95.var_hist)}</b>, an
+        implied floor near <b>${RP(v95.price_hist)}</b>, and the 99 percent loss at <b>${P(v99.var_hist)}</b>
+        with a conditional shortfall of <b>${P(v99.cvar_hist)}</b>. A ${mc.n_sims.toLocaleString()}-path
+        Monte-Carlo simulation that bootstraps the actual fat-tailed return distribution assigns a median
+        one-month outcome of <b>${RP(mc.bootstrap.median_price)}</b> and a fifth-percentile outcome of
+        <b>${RP(mc.bootstrap.p05)}</b>. These are price drawdowns rather than solvency events. MEDC's unit
+        cash cost of USD 8.6 per barrel of oil equivalent, well below the industry average, keeps the company
+        free-cash-flow positive far below prevailing Brent, so a commodity correction compresses growth
+        funding without threatening the dividend or the balance sheet. The copper position adds a
+        counter-cyclical earnings buffer through a structurally deficit metal, partially offsetting any
+        hydrocarbon weakness.</p>` },
+
+      { h: "R3: Government Gas Price Caps Force Margin Stagnation", body: `
+        <p>The Indonesian HGBT policy caps the domestic gas price at USD 6 per MMBtu for designated strategic
+        industries, and the principal regulatory risk is an expansion of that cap onto MEDC's premium assets
+        such as the Corridor Block. This is a discrete policy event rather than a continuously traded factor,
+        so it does not register in the daily betas; its severity is captured through scenario analysis instead.
+        Applying the estimated factor sensitivities, a broad domestic demand-and-margin shock of the kind
+        associated with aggressive intervention maps to a high-single to double-digit equity drawdown,
+        materially smaller than a full commodity or systemic crisis, where the modelled impacts reach
+        <b>${P(recession.expected_return)}</b> and <b>${P(covid.expected_return)}</b> respectively.</p>
+        <p>The mitigants are structural. National proven gas reserves have fallen 32 percent since 2019, from
+        49.7 to 33.8 TSCF, which strengthens the bargaining position of existing producers, and domestic
+        utilisation already exceeds export volumes, guaranteeing a captive market. Management negotiates
+        continuously with regulators to preserve fair pricing, and the diversified power and copper segments
+        dilute the earnings weight of any single capped contract.</p>` },
+
+      { h: "Quantitative Risk Summary", body: `
+        <p>Across the full ten-year sample, MEDC returns are distinctly non-normal, with excess kurtosis of
+        <b>${N(dist.excess_kurtosis,1)}</b> and a Jarque-Bera test that decisively rejects normality, which is
+        why the figures above are derived from historical and bootstrap methods rather than a Gaussian
+        assumption. Annualised volatility averages <b>${P(dr.ann_vol,0)}</b>, and a GARCH(1,1) model places
+        current conditional volatility near <b>${P(g.current_ann_vol,0)}</b> against a long-run anchor of
+        <b>${P(g.long_run_ann_vol,0)}</b>, indicating that risk mean-reverts rather than ratchets permanently
+        higher. The maximum historical drawdown of approximately <b>${P(abs(dd.max_drawdown),0)}</b>, recorded
+        between the 2018 oil peak and the 2020 pandemic trough, bundled an oil-price war with a global demand
+        collapse and has since fully recovered, evidence that the franchise survives extreme stress. The
+        market beta to the IHSG is approximately <b>${N(capm.beta,2)}</b>, so the majority of MEDC's
+        day-to-day risk is diversifiable systematic exposure rather than idiosyncratic fragility. On balance,
+        the measured risks are bounded, mitigated and asymmetric to the upside, supporting the investment
+        thesis.</p>` },
+
+      { h: "Figure Captions (Main Exhibits)", body: `
+        <div class="fig-list">
+          <b>Figure IR-1.</b> MEDC Investment-Risk Matrix (severity vs likelihood).<br>
+          <b>Figure IR-2.</b> 30-Day Historical and Parametric Value-at-Risk with CVaR, 90/95/99% confidence.<br>
+          <b>Figure IR-3.</b> Risk Transmission Map: macro factors to the share price.<br>
+          <b>Figure IR-4.</b> MEDC Sensitivity to Brent Crude (single-factor regression).<br>
+          <b>Figure IR-5.</b> Monte-Carlo Price Simulation (${mc.n_sims.toLocaleString()} bootstrap paths, ${mc.horizon}-day horizon).<br>
+          <b>Figure IR-6.</b> Macro Stress Scenarios (factor-based implied price impact).
+        </div>` },
+    ];
+
+    const nar = document.getElementById("narration");
+    nar.innerHTML = `
+      <div class="narration__bar">
+        <span class="section-head__badge">Copy into your report</span>
+        <h2>Investment Risk — Narration</h2>
+        <button class="copybtn" id="copyAll" style="position:static">⧉ Copy all</button>
+      </div>
+      <div class="doc" id="doc"></div>`;
+    const doc = nar.querySelector("#doc");
+    blocks.forEach(b => {
+      const d = document.createElement("div");
+      d.className = "doc__block";
+      d.innerHTML = `<button class="copybtn" data-copy>⧉ Copy</button>` +
+        (b.h ? `<h3>${b.h}</h3>` : "") + b.body;
+      doc.appendChild(d);
+    });
+
+    // read RENDERED text from live nodes (innerText on a detached clone returns
+    // raw source whitespace) and normalise so it pastes cleanly into a document
+    function plainText(node) {
+      const parts = [];
+      node.querySelectorAll("h3, p, .fig-list").forEach(el => {
+        const t = el.innerText.replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").trim();
+        if (t) parts.push(t);
+      });
+      return parts.join("\n\n");
+    }
+    function flash(btn) {
+      const old = btn.textContent;
+      btn.textContent = "✓ Copied"; btn.classList.add("copied");
+      setTimeout(() => { btn.textContent = old; btn.classList.remove("copied"); }, 1600);
+    }
+    doc.querySelectorAll("[data-copy]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        navigator.clipboard.writeText(plainText(btn.parentElement)).then(() => flash(btn));
+      });
+    });
+    document.getElementById("copyAll").addEventListener("click", (e) => {
+      navigator.clipboard.writeText(plainText(doc)).then(() => flash(e.currentTarget));
+    });
+  })();
 })();

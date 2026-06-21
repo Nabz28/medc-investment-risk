@@ -26,15 +26,18 @@
     <div class="masthead__title">
       <h1>PT Medco Energi Internasional <span class="tk">IDX:MEDC</span></h1>
       <p class="lede">
-        Every investment risk in the thesis — macro, domestic and global — measured against
+        Every investment risk in the thesis, macro, domestic and global, measured against
         <strong>10 years of real market data</strong>, stress-tested on the MEDC price across
         daily, weekly and monthly horizons, and projected forward with Monte&nbsp;Carlo.
-        Each panel below is <em>draggable</em> (grab the header) and <em>resizable</em> (drag the corner).
+        The <em>Main Exhibits</em> are the six figures for the report body; the <em>Appendix</em>
+        holds the supporting statistics; the <em>Narration</em> at the bottom is written to copy
+        straight into your report. Panels are draggable and resizable.
       </p>
     </div>
     <div class="toolbar">
       <button class="btn" id="resetLayout" title="Restore the default grid">⟲ Reset layout</button>
       <button class="btn" id="tidyLayout" title="Auto-arrange into a clean grid">⊞ Tidy grid</button>
+      <a class="btn" href="#narration" title="Jump to the copy-paste narration">↓ Narration</a>
       <a class="btn btn--ghost" href="./data/results.json" target="_blank" rel="noopener">↧ results.json</a>
       <span class="stamp" id="stamp"></span>
     </div>
@@ -46,6 +49,8 @@
       <div class="boot__txt">Computing risk surface from market data…</div>
     </div>
   </main>
+
+  <section id="narration" class="narration" aria-label="Investment-risk narration"></section>
 
   <footer class="colophon">
     <div>
