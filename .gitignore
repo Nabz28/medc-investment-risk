@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel/
+
+# Source deck text dump (large, regenerable)
+scripts/cache/medc_pdf_text.txt

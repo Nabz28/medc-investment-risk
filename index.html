@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MEDC · Investment Risk Engine — Cap Cap Capital</title>
+  <meta name="description" content="Statistical investment-risk dashboard for PT Medco Energi Internasional (IDX:MEDC). VaR, factor betas, GARCH, Monte Carlo and macro stress tests on real market data." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/styles.css" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.27/dist/interact.min.js"></script>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="masthead">
+    <div class="masthead__row">
+      <div class="brand">
+        <div class="brand__mark">M<span>·</span>RISK</div>
+        <div class="brand__sub">CAP CAP CAPITAL · INVESTMENT RISK ENGINE</div>
+      </div>
+      <div class="ticker" id="tickerStrip"><span class="ticker__loading">loading live tape…</span></div>
+    </div>
+    <div class="masthead__title">
+      <h1>PT Medco Energi Internasional <span class="tk">IDX:MEDC</span></h1>
+      <p class="lede">
+        Every investment risk in the thesis — macro, domestic and global — measured against
+        <strong>10 years of real market data</strong>, stress-tested on the MEDC price across
+        daily, weekly and monthly horizons, and projected forward with Monte&nbsp;Carlo.
+        Each panel below is <em>draggable</em> (grab the header) and <em>resizable</em> (drag the corner).
+      </p>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="resetLayout" title="Restore the default grid">⟲ Reset layout</button>
+      <button class="btn" id="tidyLayout" title="Auto-arrange into a clean grid">⊞ Tidy grid</button>
+      <a class="btn btn--ghost" href="./data/results.json" target="_blank" rel="noopener">↧ results.json</a>
+      <span class="stamp" id="stamp"></span>
+    </div>
+  </header>
+
+  <main id="canvas" class="canvas" aria-busy="true">
+    <div class="boot" id="boot">
+      <div class="boot__spin"></div>
+      <div class="boot__txt">Computing risk surface from market data…</div>
+    </div>
+  </main>
+
+  <footer class="colophon">
+    <div>
+      <strong>Methodology.</strong> Daily adjusted closes (Yahoo Finance) for MEDC.JK and 11 macro/commodity
+      factors, 2016–2026. Log returns aligned to MEDC trading days. HAC (Newey–West) OLS for factor betas,
+      historical &amp; Monte-Carlo VaR/CVaR over a 21-trading-day (~30 calendar-day) horizon, GARCH(1,1)-t
+      conditional volatility, and factor-based macro stress translation. All figures recomputed from source —
+      no hand-set numbers.
+    </div>
+    <div class="colophon__meta">
+      Educational risk analysis for the Cap Cap Capital MEDC equity report · not investment advice ·
+      built with Plotly + interact.js
+    </div>
+  </footer>
+
+  <script src="./js/theme.js"></script>
+  <script src="./js/charts.js"></script>
+  <script src="./js/panels.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
